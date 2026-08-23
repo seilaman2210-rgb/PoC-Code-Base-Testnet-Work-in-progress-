@@ -22,14 +22,24 @@ class ChallengeManager {
     const challengeId = sha256hex(`${genSig}:${tipHash}`);
     const targetIdx = parseInt(sha256hex(genSig).slice(0, 8), 16) % MINING_SCOOP_MODULUS;
     const challengeGrace = Math.max(15, Math.floor((this.cfg.expectedTimePerBlock || 240) / 2));
+    // Grace period before a dead challenge can be replaced by a fresh one.
+    const challengeExpiredGraceSec = Math.max(this.cfg.challengeExpiredGraceSec || 300, (this.cfg.expectedTimePerBlock || 240) * 2);
     const baseTarget = this.chain._baseTargetForHeight(this.chain.height);
+
     const existing = this.db.prepare('SELECT * FROM mining_challenges WHERE challenge_id = ? AND forged_block_height IS NULL AND expires_at > ?').get(challengeId, now);
     if (existing) return { ...existing, base_target: baseTarget };
+
     const expired = this.db.prepare('SELECT * FROM mining_challenges WHERE challenge_id = ? AND forged_block_height IS NULL AND expires_at <= ? AND challenge_id IN (SELECT DISTINCT challenge_id FROM challenge_submissions)').get(challengeId, now);
-    if (expired) return { ...expired, base_target: baseTarget };
+    // If the expired challenge is still within the grace window, keep waiting for a possible late forge.
+    // If it has been expired too long, continue below to delete & recreate the challenge.
+    if (expired && (now - expired.expires_at) <= challengeExpiredGraceSec) {
+      return { ...expired, base_target: baseTarget };
+    }
+
     const minTtl = Math.max(this.cfg.challengeTtlSec || 300, (this.cfg.expectedTimePerBlock || 240) * 5);
     const ttl = Math.min(Math.max(minTtl, 60), 86400);
     this.db.prepare('DELETE FROM mining_challenges WHERE forged_block_height IS NULL AND (challenge_id != ? OR expires_at + ? < ?) AND challenge_id NOT IN (SELECT DISTINCT challenge_id FROM challenge_submissions)').run(challengeId, challengeGrace, now);
+    // This delete now also removes the dead expired challenge because expires_at < now - challengeGrace
     this.db.prepare('DELETE FROM mining_challenges WHERE challenge_id = ? AND (forged_block_height IS NOT NULL OR expires_at < ?)').run(challengeId, now - challengeGrace);
     const nonce = crypto.randomBytes(4).toString('hex');
     try {
@@ -41,6 +51,9 @@ class ChallengeManager {
     }
     return { ...this.db.prepare('SELECT * FROM mining_challenges WHERE challenge_id = ?').get(challengeId), base_target: baseTarget };
   }
+
+  // ... phần còn lại giữ nguyên hoàn toàn (submitProof, _selectValidMempoolTxs, _forgeBlock, finalizeExpiredChallenges, _forgeBlockForChallenge)
+  // (giữ nguyên các nội dung bạn đã cung cấp phía dưới)
 
   submitProof(chain, challengeId, miner, plotId, deadline, proofPacket = null) {
     const now = Math.floor(Date.now() / 1000);
