@@ -28,6 +28,13 @@ contract CcPool {
     uint256 public totalCcVolume;
     uint256 public totalTokenVolume;
 
+    // Access control
+    address public owner;
+    modifier onlyOwner() {
+        require(msg.sender == owner, 'not owner');
+        _;
+    }
+
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Mint(address indexed lp, uint256 lpAmount, uint256 tokenAmount, uint256 ccAmount);
     event Burn(address indexed lp, uint256 lpAmount, uint256 tokenAmount, uint256 ccAmount);
@@ -38,6 +45,7 @@ contract CcPool {
         feeBps = feeBps_ <= 10000 ? feeBps_ : 30;
         name = 'CC-LP';
         symbol = 'CCLP';
+        owner = msg.sender; // set owner to deployer
     }
 
     function _mint(address to, uint256 amount) internal {
@@ -100,7 +108,7 @@ contract CcPool {
         emit Burn(msg.sender, lpAmount, tokenOut, ccOut);
     }
 
-    function swapTokenForCc(uint256 tokenIn) external returns (uint256 ccOut) {
+    function swapTokenForCc(uint256 tokenIn, uint256 minCcOut) external returns (uint256 ccOut) {
         require(tokenIn > 0, 'zero in');
         uint256 before = IERC20Minimal(token).balanceOf(address(this));
         IERC20Minimal(token).transferFrom(msg.sender, address(this), tokenIn);
@@ -108,6 +116,7 @@ contract CcPool {
         uint256 net = (actualIn * (10000 - feeBps)) / 10000;
         ccOut = (ccReserve * net) / (tokenReserve + net);
         require(ccOut > 0, 'zero out');
+        require(ccOut >= minCcOut, 'slippage too high'); // slippage protection
         tokenReserve += actualIn;
         ccReserve -= ccOut;
         payable(msg.sender).transfer(ccOut);
@@ -117,12 +126,13 @@ contract CcPool {
         emit Swap(msg.sender, actualIn, 0, 0, ccOut);
     }
 
-    function swapCcForToken() external payable returns (uint256 tokenOut) {
+    function swapCcForToken(uint256 minTokenOut) external payable returns (uint256 tokenOut) {
         require(msg.value > 0, 'zero in');
         uint256 net = (msg.value * (10000 - feeBps)) / 10000;
         tokenOut = (tokenReserve * net) / (ccReserve + net);
         require(tokenOut > 0, 'zero out');
         require(tokenOut < tokenReserve, 'max');
+        require(tokenOut >= minTokenOut, 'slippage too high'); // slippage protection
         ccReserve += msg.value;
         tokenReserve -= tokenOut;
         require(IERC20Minimal(token).transfer(msg.sender, tokenOut), 'token transfer failed');
@@ -132,7 +142,7 @@ contract CcPool {
         emit Swap(msg.sender, 0, msg.value, tokenOut, 0);
     }
 
-    function sync() external {
+    function sync() external onlyOwner {
         tokenReserve = IERC20Minimal(token).balanceOf(address(this));
     }
 
