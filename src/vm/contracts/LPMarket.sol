@@ -149,6 +149,7 @@ contract LPMarket {
         totalCcVolume += ccAmount;
         totalQuoteVolume += quoteAmount;
         liquidityQuote[it.lp] -= quoteAmount;
+        liquidityCc[it.lp] -= ccAmount; // <-- FIX: release/consume CC collateral proportionally
         q.filledCc += ccAmount;
         q.filledQuote += quoteAmount;
         it.active = false;
