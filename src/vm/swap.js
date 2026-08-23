@@ -1,16 +1,12 @@
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
-import { fileURLToPath } from 'url';
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
-import { initDB } from '../Blockchain/db.js';
-import { Chain } from '../Blockchain/chain.js';
-import * as SC from './smartcontracts.js';
-import { createDex, WEI, ccFromEthKey, formatAmount } from './dex.js';
-import { load } from './modules/index.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const { initDB } = require('../Blockchain/db');
+const { Chain } = require('../Blockchain/chain');
+const SC = require('./smartcontracts');
+const { createDex, WEI, ccFromEthKey, formatAmount } = require('./dex');
+const { load } = require('./modules/index.js');
 
 const plugins = load();
 const ASSET = process.env.SWAP_ASSET || 'POL';
@@ -163,7 +159,7 @@ async function runSwap() {
   process.exitCode = fails ? 1 : 0;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (require.main === module) {
   runSwap().catch(e => {
     console.error('SWAP ERROR:', e.code || '', e.message);
     process.exitCode = 1;
