@@ -101,8 +101,8 @@ function formatAmount(wei, decimals = 18) {
 }
 
 const DEFAULT_TX_OPTS = {
-  skipTxValidation: true, skipPocValidation: true, skipSignature: true,
-  skipHashValidation: true, skipTargetValidation: true, skipStateValidation: false,
+  skipTxValidation: false, skipPocValidation: false, skipSignature: false,
+  skipHashValidation: false, skipTargetValidation: false, skipStateValidation: false,
 };
 
 function createDex(opts) {
