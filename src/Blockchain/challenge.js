@@ -52,8 +52,6 @@ class ChallengeManager {
     return { ...this.db.prepare('SELECT * FROM mining_challenges WHERE challenge_id = ?').get(challengeId), base_target: baseTarget };
   }
 
-  // ... phần còn lại giữ nguyên hoàn toàn (submitProof, _selectValidMempoolTxs, _forgeBlock, finalizeExpiredChallenges, _forgeBlockForChallenge)
-  // (giữ nguyên các nội dung bạn đã cung cấp phía dưới)
 
   submitProof(chain, challengeId, miner, plotId, deadline, proofPacket = null) {
     const now = Math.floor(Date.now() / 1000);
