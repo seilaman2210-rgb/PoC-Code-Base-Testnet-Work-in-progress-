@@ -382,7 +382,7 @@ app.get('/api/state', (req, res) => {
       res.json(ch);
     });
 
-    app.post('/api/mining/submit-proof', (req, res) => {
+    app.post('/api/mining/submit-proof', mutationLimiter, (req, res) => {
       const { challenge_id, miner, plot_id, deadline, proof_packet, proof_signature } = req.body;
       if (!challenge_id || !miner || !plot_id || deadline == null) return res.status(400).json({ error: 'challenge_id, miner, plot_id, deadline required' });
       const packet = proof_packet || {};
@@ -448,7 +448,7 @@ app.get('/api/state', (req, res) => {
       res.json({ contract: c });
     });
 
-    app.post('/api/contracts/deploy', async (req, res) => {
+    app.post('/api/contracts/deploy', mutationLimiter, async (req, res) => {
       if (!contractsEnabled()) return contractsDisabled(res);
       const { code, sender, private_key } = req.body || {};
       if (!code || !sender) return res.status(400).json({ error: 'code, sender, and private_key required' });
@@ -473,7 +473,7 @@ app.get('/api/state', (req, res) => {
       }
     });
 
-    app.post('/api/contracts/call', async (req, res) => {
+    app.post('/api/contracts/call', mutationLimiter, async (req, res) => {
       if (!contractsEnabled()) return contractsDisabled(res);
       const { address, sender, data, value } = req.body || {};
       if (!address || !sender) return res.status(400).json({ error: 'address and sender required' });
@@ -487,7 +487,7 @@ app.get('/api/state', (req, res) => {
       }
     });
 
-    app.post('/api/contracts/call-batch', async (req, res) => {
+    app.post('/api/contracts/call-batch', mutationLimiter, async (req, res) => {
       if (!contractsEnabled()) return contractsDisabled(res);
       const { address, sender, calls } = req.body || {};
       if (!address || !sender || !Array.isArray(calls)) return res.status(400).json({ error: 'address, sender, and calls[] required' });
@@ -503,7 +503,7 @@ app.get('/api/state', (req, res) => {
       res.json({ ok: true, results });
     });
 
-    app.post('/api/contracts/execute', async (req, res) => {
+    app.post('/api/contracts/execute', mutationLimiter, async (req, res) => {
       if (!contractsEnabled()) return contractsDisabled(res);
       try {
         const { address, sender, data, value, private_key } = req.body || {};
@@ -707,7 +707,7 @@ const validation = await this.chain.validateTxForMempool(tx);
       res.json({ ok: true, peers: this.peers.gossipPeers(20), stats: this.registry.getStats(), chain_id: this.cfg.chainId });
     });
 
-    app.post('/api/challenge/submit', (req, res) => {
+    app.post('/api/challenge/submit', mutationLimiter, (req, res) => {
       const { challenge_id, miner, plot_id, deadline, proof_packet, proof_signature } = req.body;
       if (!challenge_id || !miner || !plot_id || deadline == null) return res.status(400).json({ error: 'challenge_id, miner, plot_id, deadline required' });
       const packet = proof_packet || {};
