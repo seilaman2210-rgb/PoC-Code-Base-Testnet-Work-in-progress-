@@ -1,10 +1,10 @@
-import { ZERO_HASH, sha256hex, safeInt, safeBigInt, hashBlock, hashTransaction, merkleRoot, computeStateRoot, computeStateRootAfterTxs, computeContractStateRoot, verifySignature, calculateMiningReward, isBetterChainCandidate, canonicalTxMessage, blockMessage, signMessage, proofMessage, plotScoopCount, MINING_SCOOP_MODULUS } from '../crypto.js';
-import { IncrementalStateRoot } from './state-trie.js';
-import { hashBlockAsync, verifySignatureAsync, canonicalTxMessageAsync } from '../worker-pool.js';
-import { estimateIntrinsicGas, nextBaseFee, GAS_PARAMS } from '../consensus/gas.js';
-import { log } from '../config.js';
-import { createBlock } from '@ethereumjs/block';
-import BN from 'bn.js';
+const { ZERO_HASH, sha256hex, safeInt, safeBigInt, hashBlock, hashTransaction, merkleRoot, computeStateRoot, computeStateRootAfterTxs, computeContractStateRoot, verifySignature, calculateMiningReward, isBetterChainCandidate, canonicalTxMessage, blockMessage, signMessage, proofMessage, plotScoopCount, MINING_SCOOP_MODULUS } = require('../crypto');
+const { IncrementalStateRoot } = require('./state-trie');
+const { hashBlockAsync, verifySignatureAsync, canonicalTxMessageAsync } = require('../worker-pool');
+const { estimateIntrinsicGas, nextBaseFee, GAS_PARAMS } = require('../consensus/gas');
+const { log } = require('../config');
+const { createBlock } = require('@ethereumjs/block');
+const BN = require('bn.js');
 
 const FINALIZATION_DEPTH = 30;
 function normalizeAddr(a) { return typeof a === 'string' ? a.toLowerCase() : a; }
@@ -1080,4 +1080,4 @@ class Chain {
 
 }
 
-export { Chain, FINALIZATION_DEPTH };
+module.exports = { Chain, FINALIZATION_DEPTH };
