@@ -1,11 +1,10 @@
-import axios from 'axios';
-import crypto from 'crypto';
-import { privateToAddress, setLengthLeft } from '@ethereumjs/util';
-import { secp256k1 } from '@noble/curves/secp256k1.js';
-import { encode as rlpEncode } from '@ethereumjs/rlp';
-import { AbiCoder, Interface } from 'ethers';
-import { keccak256 } from 'ethers';
-import { compileHTLC as compileHTLCImpl } from './contracts/index.js';
+const axios = require('axios');
+const crypto = require('crypto');
+const { privateToAddress, setLengthLeft } = require('@ethereumjs/util');
+const { secp256k1 } = require('@noble/curves/secp256k1.js');
+const rlp = require('@ethereumjs/rlp');
+const { AbiCoder, Interface, keccak256 } = require('ethers');
+const { compileHTLC: compileHTLCImpl } = require('./contracts/index.js');
 
 const ABI = AbiCoder.defaultAbiCoder();
 
@@ -98,7 +97,7 @@ function createWallet(privKeyHex) {
     const toBuf = to ? hexBuf(to) : Buffer.alloc(0);
     const dataBuf = data ? hexBuf(data) : Buffer.alloc(0);
     const pre = [bigBuf(nonce), bigBuf(gasPrice), bigBuf(gas), toBuf, bigBuf(value), dataBuf, bigBuf(chainId), bigBuf(0n), bigBuf(0n)];
-    const hash = keccak256(rlpEncode(pre));
+    const hash = keccak256(rlp.encode(pre));
     const sig = ecsign(hash, pk);
     const v = chainId * 2n + 35n + BigInt(sig.v) - 27n;
     const signed = [
@@ -193,7 +192,7 @@ function makeEVMPlugin({
   return plugin;
 }
 
-export {
+module.exports = {
   hexBuf, bigBuf, hexify, encodeCall, weiToDec, htlcDeployData,
   createClient, createWallet, walletSend, readHTLC, compileHTLC, makeEVMPlugin,
 };
