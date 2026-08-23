@@ -9,6 +9,9 @@ import * as SC from './smartcontracts.js';
 import { createDex, WEI, ccFromEthKey, formatAmount } from './dex.js';
 import { load } from './modules/index.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const plugins = load();
 const ASSET = process.env.SWAP_ASSET || 'POL';
 const P = plugins[ASSET];
