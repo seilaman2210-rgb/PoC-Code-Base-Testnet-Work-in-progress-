@@ -35,7 +35,47 @@ const MAX_CONTRACT_CODE_SIZE = 24576; // 24 KB
 
 let db = null;
 
-const vmCache = new Map();
+// ==== LRU cache for VMs to prevent unbounded growth and avoid full clears ====
+class LRUCache {
+  constructor(maxSize = 100) {
+    this.maxSize = maxSize;
+    this.map = new Map();
+  }
+
+  get(key) {
+    if (!this.map.has(key)) return undefined;
+    const value = this.map.get(key);
+    // refresh key order
+    this.map.delete(key);
+    this.map.set(key, value);
+    return value;
+  }
+
+  set(key, value) {
+    if (this.map.has(key)) {
+      this.map.delete(key);
+    } else if (this.map.size >= this.maxSize) {
+      // evict oldest entry (first inserted)
+      const oldestKey = this.map.keys().next().value;
+      this.map.delete(oldestKey);
+    }
+    this.map.set(key, value);
+  }
+
+  has(key) {
+    return this.map.has(key);
+  }
+
+  clear() {
+    this.map.clear();
+  }
+
+  get size() {
+    return this.map.size;
+  }
+}
+
+const vmCache = new LRUCache(100);
 const knownSlots = new Map();
 const storageLoadTimestamps = new Map();
 const STORAGE_LOAD_TTL_MS = 3000;
@@ -45,8 +85,10 @@ function setDatabase(database) {
 }
 
 function clearVmCache() {
-  vmCache.clear();
+  // Do not clear VM instances – they are reusable across blocks.
+  // Clear only slot metadata and storage TTLs to force a fresh reload of storage.
   knownSlots.clear();
+  storageLoadTimestamps.clear();
 }
 
 async function getVm(contractAddress) {
