@@ -1,5 +1,5 @@
-import crypto from 'crypto';
-import { load } from './modules/index.js';
+const crypto = require('crypto');
+const { load } = require('./modules/index.js');
 
 const pluginRegistry = load();
 
@@ -369,4 +369,4 @@ class P2PExchange {
   }
 }
 
-export { P2PExchange };
+module.exports = { P2PExchange };
