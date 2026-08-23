@@ -16,6 +16,7 @@ class SparseMerkleTrie {
     this.leaves = new Map();
     this.cache = new Map();
     this.root = EMPTY_ROOT;
+    this._dirty = false;
   }
 
   _getPath(key) {
@@ -44,30 +45,43 @@ class SparseMerkleTrie {
     return level[0] || EMPTY_ROOT;
   }
 
+  _setLeaf(path, value) {
+    if (value === EMPTY_ROOT || value === '' || value === '0'.repeat(64)) {
+      this.leaves.delete(path);
+    } else {
+      this.leaves.set(path, value);
+    }
+  }
+
   get(key) {
     return this.leaves.get(this._getPath(key)) || EMPTY_ROOT;
   }
 
   set(key, value) {
     const path = this._getPath(key);
-    const oldValue = this.leaves.get(path);
-    
-    if (value === EMPTY_ROOT || value === '' || value === '0'.repeat(64)) {
-      this.leaves.delete(path);
-    } else {
-      this.leaves.set(path, value);
-    }
-    
-    this.root = this._computeRoot();
-    return oldValue;
+    this._setLeaf(path, value);
+    this._dirty = true;
   }
 
   delete(key) {
-    return this.set(key, EMPTY_ROOT);
+    this.set(key, EMPTY_ROOT);
   }
 
   getRoot() {
+    if (this._dirty) {
+      this.root = this._computeRoot();
+      this._dirty = false;
+    }
     return this.root;
+  }
+
+  batchUpdate(updates) {
+    for (const [key, value] of updates) {
+      const path = this._getPath(key);
+      this._setLeaf(path, value);
+    }
+    this._dirty = true;
+    return this.getRoot();
   }
 
   getProof(key) {
@@ -137,17 +151,11 @@ class SparseMerkleTrie {
     return current === root;
   }
 
-  batchUpdate(updates) {
-    for (const [key, value] of updates) {
-      this.set(key, value);
-    }
-    return this.root;
-  }
-
   clone() {
     const newTrie = new SparseMerkleTrie();
     newTrie.leaves = new Map(this.leaves);
     newTrie.root = this.root;
+    newTrie._dirty = false; // root is up-to-date at clone time
     return newTrie;
   }
 }
@@ -175,6 +183,16 @@ class IncrementalStateRoot {
     this.userTrie.delete(key);
   }
 
+  batchUpdateUsers(updates) {
+    for (const u of updates) {
+      const key = this._normalizeAddr(u.address);
+      const leaf = sha256hex(`${key}:${u.balance}:${u.nonce}`);
+      this.userTrie.set(key, leaf);
+    }
+    // force root recomputation once after all updates
+    this.userTrie.getRoot();
+  }
+
   updateContractStorage(contractAddress, slot, value) {
     const addr = this._normalizeAddr(contractAddress);
     const slotKey = BigInt(slot).toString(16).padStart(64, '0');
@@ -199,6 +217,15 @@ class IncrementalStateRoot {
   deleteContractAccount(address) {
     const addr = this._normalizeAddr(address);
     this.contractAccountTrie.delete(addr);
+  }
+
+  batchUpdateContracts(updates) {
+    for (const c of updates) {
+      const addr = this._normalizeAddr(c.address);
+      const leaf = sha256hex(`account:${addr}:${c.balance}`);
+      this.contractAccountTrie.set(addr, leaf);
+    }
+    this.contractAccountTrie.getRoot();
   }
 
   updateContractCode(address, codeHash) {
