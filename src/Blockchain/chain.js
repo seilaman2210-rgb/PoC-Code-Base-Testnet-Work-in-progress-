@@ -207,7 +207,13 @@ class Chain {
         candidates += BigInt(Math.max(1, Math.ceil(total / MINING_SCOOP_MODULUS)));
       }
     } catch {}
-    if (candidates < 1n) candidates = BigInt(8192 * blockTime);
+    if (candidates < 1n) {
+      // Fallback: assume a small network instead of a huge fixed constant.
+      // This makes initial mining feasible on dev/testnet.
+      const fallbackSizeGb = Math.max(1, Number(this.cfg.initialPlotGb || 10));
+      const total = plotScoopCount(fallbackSizeGb);
+      candidates = BigInt(Math.max(1, Math.ceil(total / MINING_SCOOP_MODULUS)));
+    }
     const bt = (BigInt(2) ** BigInt(64)) / (candidates * BigInt(blockTime));
     const MAX_BT = BigInt('1000000000000000000');
     return String(bt < 1n ? 1n : bt > MAX_BT ? MAX_BT : bt);
@@ -217,6 +223,26 @@ class Chain {
     if (height === 0) return this._defaultBaseTarget();
     const windowSize = this.cfg.difficultyAdjustBlocks || 8192;
     if (height < windowSize) {
+      const bootstrapWindow = Math.min(windowSize, this.cfg.bootstrapAdjustBlocks || 100);
+      if (height < bootstrapWindow) {
+        const prev = this.db.prepare('SELECT base_target, timestamp FROM blocks WHERE height = ?').get(height - 1);
+        if (prev) {
+          const prevTarget = BigInt(prev.base_target || this._defaultBaseTarget());
+          const expectedTime = this.cfg.expectedTimePerBlock || 240;
+          const parentTime = prev.timestamp;
+          const grandParent = this.db.prepare('SELECT timestamp FROM blocks WHERE height = ?').get(Math.max(0, height - 2));
+          if (grandParent) {
+            const actualDelta = Math.max(1, parentTime - grandParent.timestamp);
+            const ratio = BigInt(Math.floor((expectedTime * 1000) / Math.max(1, actualDelta)));
+            let newTarget = (prevTarget * ratio) / 1000n;
+            if (newTarget > prevTarget * 2n) newTarget = prevTarget * 2n;
+            if (newTarget < prevTarget / 2n) newTarget = prevTarget / 2n;
+            if (newTarget < 1n) newTarget = 1n;
+            return String(newTarget);
+          }
+        }
+      }
+      // Fallback to copying previous if bootstrap adjustment not applicable
       const prev = this.db.prepare('SELECT base_target FROM blocks WHERE height = ?').get(height - 1);
       return (prev && prev.base_target) ? prev.base_target : this._defaultBaseTarget();
     }
