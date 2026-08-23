@@ -136,7 +136,7 @@ class SyncEngine {
             continue;
           }
           block._from_local_forge = false;
-          const insertResult = await this.chain._insertBlockDirect(block);
+          const insertResult = await this.chain.addBlock(block);
           if (!insertResult.ok) { log('debug', `sync: block insert rejected at #${block.height}: ${insertResult.motivo}`); break; }
           inserted++;
           from = block.height + 1;
