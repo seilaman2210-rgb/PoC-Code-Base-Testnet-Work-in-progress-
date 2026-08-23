@@ -305,7 +305,7 @@ class ChallengeManager {
       };
       const block = this._forgeBlock(chain, challenge, winner.miner, winner.deadline, distribution, winner.plot_id || '', winner.proof_digest || '', winnerProof);
       if (!block) return null;
-      const result = await chain.addBlock(block, { skipStateValidation: true, skipPocValidation: true, skipTxValidation: true });
+      const result = await chain.addBlock(block, { skipStateValidation: true, skipPocValidation: true });
       if (!result.ok) {
         log('error', `Block forge rejected for challenge ${challenge.challenge_id.slice(0, 12)}: ${result.motivo}`);
         return null;
