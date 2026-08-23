@@ -8,14 +8,18 @@ const GAS_PARAMS = {
 
 function estimateIntrinsicGas(tx) {
   let gas = GAS_PARAMS.simpleTransferGas;
-  const data = tx.data ? Buffer.from(tx.data, 'hex') : Buffer.alloc(0);
+  let dataHex = '';
+  if (tx.data) {
+    dataHex = tx.data.startsWith('0x') ? tx.data.slice(2) : tx.data;
+  }
+  const data = dataHex ? Buffer.from(dataHex, 'hex') : Buffer.alloc(0);
   for (const byte of data) {
     gas += byte === 0 ? GAS_PARAMS.gasPerByteZero : GAS_PARAMS.gasPerByteNonZero;
   }
   return gas;
 }
 
-function nextBaseFee(parentBaseFee, parentGasUsed, targetGas, minGasPrice, mempoolPendingCount) {
+function nextBaseFee(parentBaseFee, parentGasUsed, targetGas, minGasPrice, mempoolPendingCount = 0) {
   if (parentGasUsed === targetGas) return parentBaseFee;
   const delta = parentGasUsed > targetGas
     ? (parentBaseFee * BigInt(parentGasUsed - targetGas)) / BigInt(targetGas) / 8n
