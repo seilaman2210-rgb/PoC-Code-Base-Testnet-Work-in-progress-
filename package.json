@@ -2,6 +2,7 @@
   "name": "choconode",
   "version": "3.6.0",
   "private": true,
+  "type": "module",
   "bin": {
     "choco": "./src/index.js"
   },
@@ -13,10 +14,13 @@
     "@ethereumjs/block": "^10.1.2",
     "@ethereumjs/common": "^10.1.2",
     "@ethereumjs/evm": "^10.1.2",
+    "@ethereumjs/rlp": "^4.0.1",
     "@ethereumjs/statemanager": "^10.1.2",
     "@ethereumjs/tx": "^10.1.2",
     "@ethereumjs/util": "^10.1.2",
     "@ethereumjs/vm": "^10.1.2",
+    "@noble/curves": "^1.4.0",
+    "axios": "^1.6.0",
     "better-sqlite3": "^11.7.0",
     "bn.js": "^5.2.5",
     "ethers": "^6.13.0",
